@@ -25,4 +25,19 @@ export class MessagesService {
       )
       .sort((x, y) => x.timestamp - y.timestamp);
   }
+
+  all(): ChatMessage[] {
+    return this.messages;
+  }
+
+  delete(id: number, requester: string): ChatMessage | null {
+    const idx = this.messages.findIndex((m) => m.id === id);
+    if (idx === -1) return null;
+    const msg = this.messages[idx];
+    if (msg.from !== requester) {
+      throw new Error('Not allowed to delete this message');
+    }
+    this.messages.splice(idx, 1);
+    return msg;
+  }
 }

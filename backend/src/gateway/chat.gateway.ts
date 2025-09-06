@@ -96,4 +96,32 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const recSockets = this.online.get(to);
     recSockets?.forEach((sid) => this.server.to(sid).emit('new_message', msg));
   }
+
+  @SubscribeMessage('delete_message')
+  deleteMessage(
+    @MessageBody() body: { id: number },
+    @ConnectedSocket() client: Socket,
+  ) {
+    const from = this.sockets.get(client.id);
+    if (!from) return client.emit('delete_error', { error: 'Not registered' });
+
+    try {
+      const deleted = this.messages.delete(body.id, from);
+      if (!deleted) {
+        return client.emit('delete_error', { error: 'Message not found' });
+      }
+
+      // Notify sender
+      client.emit('message_deleted', { id: deleted.id });
+
+      // Notify recipient sockets if online
+      const recSockets = this.online.get(deleted.to);
+      recSockets?.forEach((sid) =>
+        this.server.to(sid).emit('message_deleted', { id: deleted.id }),
+      );
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : 'Deletion failed';
+      client.emit('delete_error', { error: errorMessage });
+    }
+  }
 }

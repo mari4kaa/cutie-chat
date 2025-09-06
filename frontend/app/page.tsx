@@ -51,6 +51,10 @@ export default function Page() {
       }
     });
 
+    s.on('message_deleted', ({ id }: { id: number }) => {
+      setMessages((prev) => prev.filter((m) => m.id !== id));
+    });
+
     return () => { s.disconnect(); };
   }, [currentUser, recipient]);
 
@@ -80,6 +84,12 @@ export default function Page() {
     if (!s || !currentUser || !recipient || !text.trim()) return;
     s.emit('send_message', { to: recipient, text: text.trim() });
     setText('');
+  }
+
+  function deleteMessage(id: number) {
+    const s = socketRef.current;
+    if (!s) return;
+    s.emit('delete_message', { id });
   }
 
   const convoTitle = useMemo(() => {
@@ -146,12 +156,28 @@ export default function Page() {
         </header>
 
         <div className="flex-1 overflow-auto p-4 space-y-2">
-          {messages.map((m) => (
-            <div key={m.id} className={`max-w-[70%] p-3 rounded-2xl shadow ${m.from === currentUser ? 'ml-auto bg-gray-900 text-white' : 'mr-auto bg-gray-100'}`}>
-              <div className="text-xs opacity-70 mb-1">{m.from} → {m.to} · {new Date(m.timestamp).toLocaleTimeString()}</div>
-              <div>{m.text}</div>
+        {messages.map((m) => (
+          <div
+            key={m.id}
+            className={`relative max-w-[70%] p-3 rounded-2xl shadow ${
+              m.from === currentUser ? 'ml-auto bg-gray-900 text-white' : 'mr-auto bg-gray-100'
+            }`}
+          >
+            <div className="text-xs opacity-70 mb-1">
+              {m.from} → {m.to} · {new Date(m.timestamp).toLocaleTimeString()}
             </div>
-          ))}
+            <div>{m.text}</div>
+
+            {m.from === currentUser && (
+              <button
+                onClick={() => deleteMessage(m.id)}
+                className="absolute top-1 right-2 text-xs text-red-400 hover:text-red-600"
+              >
+                Delete
+              </button>
+            )}
+          </div>
+        ))}
           <div ref={bottomRef} />
         </div>
 
