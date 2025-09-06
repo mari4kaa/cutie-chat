@@ -99,7 +99,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('delete_message')
   deleteMessage(
-    @MessageBody() body: { id: number },
+    @MessageBody() body: { id: string },
     @ConnectedSocket() client: Socket,
   ) {
     const from = this.sockets.get(client.id);
@@ -111,13 +111,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return client.emit('delete_error', { error: 'Message not found' });
       }
 
-      // Notify sender
-      client.emit('message_deleted', { id: deleted.id });
-
-      // Notify recipient sockets if online
+      this.server.to(client.id).emit('message_deleted', deleted);
       const recSockets = this.online.get(deleted.to);
       recSockets?.forEach((sid) =>
-        this.server.to(sid).emit('message_deleted', { id: deleted.id }),
+        this.server.to(sid).emit('message_deleted', deleted),
       );
     } catch (e: unknown) {
       const errorMessage = e instanceof Error ? e.message : 'Deletion failed';

@@ -1,7 +1,8 @@
 export interface ChatMessage {
-  id: number;
+  id: string;
   from: string; // sender username
   to: string; // recipient username
   text: string;
   timestamp: number;
+  deleted?: boolean;
 }

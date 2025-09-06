@@ -1,14 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { ChatMessage } from '../common/types';
 
+import { v4 as uuidv4 } from 'uuid';
+
 @Injectable()
 export class MessagesService {
   private messages: ChatMessage[] = [];
-  private idSeq = 1;
 
   add(from: string, to: string, text: string): ChatMessage {
     const msg: ChatMessage = {
-      id: this.idSeq++,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+      id: uuidv4() as string,
       from,
       to,
       text,
@@ -30,14 +32,16 @@ export class MessagesService {
     return this.messages;
   }
 
-  delete(id: number, requester: string): ChatMessage | null {
-    const idx = this.messages.findIndex((m) => m.id === id);
-    if (idx === -1) return null;
-    const msg = this.messages[idx];
+  delete(id: string, requester: string): ChatMessage | null {
+    const msg = this.messages.find((m) => m.id === id);
+    if (!msg) return null;
     if (msg.from !== requester) {
       throw new Error('Not allowed to delete this message');
     }
-    this.messages.splice(idx, 1);
+
+    msg.text = '';
+    msg.deleted = true;
+
     return msg;
   }
 }

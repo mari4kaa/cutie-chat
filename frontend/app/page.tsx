@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import io, { Socket } from 'socket.io-client';
 import { api, BACKEND_WS } from './api-client';
 
-type ChatMessage = { id: number; from: string; to: string; text: string; timestamp: number };
+import { ChatMessage } from '../../backend/src/common/types';
 
 export default function Page() {
   const [users, setUsers] = useState<string[]>([]);
@@ -51,9 +51,15 @@ export default function Page() {
       }
     });
 
-    s.on('message_deleted', ({ id }: { id: number }) => {
-      setMessages((prev) => prev.filter((m) => m.id !== id));
-    });
+    s.on('message_deleted', (msg: ChatMessage & { deleted?: boolean }) => {
+      setMessages((prev) =>
+        prev.map((m) => (m.id === msg.id ? { ...m, ...msg } : m))
+      );
+    });    
+
+    s.on('delete_error', (p: { error: string }) => {
+      alert(p?.error || 'Failed to delete message');
+    });    
 
     return () => { s.disconnect(); };
   }, [currentUser, recipient]);
@@ -86,7 +92,7 @@ export default function Page() {
     setText('');
   }
 
-  function deleteMessage(id: number) {
+  function deleteMessage(id: string) {
     const s = socketRef.current;
     if (!s) return;
     s.emit('delete_message', { id });
@@ -164,13 +170,14 @@ export default function Page() {
             }`}
           >
             <div className="text-xs opacity-70 mb-1">
-              {m.from} → {m.to} · {new Date(m.timestamp).toLocaleTimeString()}
+              {m.from} · {new Date(m.timestamp).toLocaleTimeString()}
             </div>
-            <div>{m.text}</div>
 
-            {m.from === currentUser && (
+            <div>{m.deleted ? <i className="opacity-60">This message was deleted</i> : m.text}</div>
+
+            {m.from === currentUser && !m.deleted && (
               <button
-                onClick={() => deleteMessage(m.id)}
+                onClick={() => deleteMessage(m.id.toString())}
                 className="absolute top-1 right-2 text-xs text-red-400 hover:text-red-600"
               >
                 Delete
